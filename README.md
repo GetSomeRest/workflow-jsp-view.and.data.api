@@ -7,9 +7,6 @@
 
 This is a sample in JSP demoing the complete workflow of using Autodesk View and Data API
 
-If all you want is to embed a 3D viewer into your website, the simplest way is demoed in this sample. 
-
-Limitation: It is difficult to get the viewer object and manipulate the viewer with viewer client side API. If you want to have more control of the viewer, you should consider adding viewer with viewer client API and div tag. 
 
 ##Dependencies
 
