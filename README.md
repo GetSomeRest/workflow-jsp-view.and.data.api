@@ -10,7 +10,7 @@ This is a sample in JSP demoing the complete workflow of using Autodesk View and
 
 ##Dependencies
 
-None
+To run this sample, you need a web server(tomcat for instance) and have Java environment configured correctly.
 
 
 ##Setup/Usage Instructions
@@ -22,13 +22,13 @@ None
 
 To use this app, you need to apply a consumer key by creating an app in http://developer.autodesk.com
 
-* Site Admin -> fill your consumer key and secret, apply.
+* Site Admin -> fill in your consumer key and secret key, click "apply" button.
 * Upload -> drag/drop to upload your file
 * View -> view your model by clicking the thumbnail.
 
 ## License
 
-client-embedded-view.and.data.api is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT). Please see the [LICENSE](LICENSE) file for full details.
+This sample is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT). Please see the [LICENSE](LICENSE) file for full details.
 
 ##Written by 
 
