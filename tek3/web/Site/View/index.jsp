@@ -32,66 +32,50 @@
 
 
 
-	<link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.css" type="text/css">
-    <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js"></script>
+	<link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.css?v=0.1.88" type="text/css">
+    <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=0.1.88"></script>
 
 
       <script>
 
-          var viewers = [];
-          function initialize() {
+      var viewers = [];
+      function initialize() {
 
-  			var options = {};
-        
-			options.accessToken = Autodesk.Viewing.Private.getParameterByName("accessToken") ? Autodesk.Viewing.Private.getParameterByName(		"accessToken") : token;
-			options.document = 'urn:<%=urn%>';
 
-			var viewerContainer = document.getElementById('viewer1');
-			var viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerContainer, {});
-			
-			Autodesk.Viewing.Initializer(options, function () {
-				viewer.initialize();
-				//loadDocument(viewer, getAuthObject(), options.document);
-				//when the changes are pushed to prod
-				loadDocument(viewer, Autodesk.Viewing.Private.getAuthObject(), options.document);
-			});
+        var options = {};
 
-		
+  			options.accessToken = Autodesk.Viewing.Private.getParameterByName("accessToken") ? Autodesk.Viewing.Private.getParameterByName("accessToken") : token;
+  			options.document = 'urn:<%=urn%>';
+
+  			var viewerContainer = document.getElementById('viewer1');
+  			var viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerContainer, {});
+  			
+  			Autodesk.Viewing.Initializer(options, function () {
+              viewer.start();
+              loadDocument(viewer, options.document);
+        });
+
+
            
-          }
+      }
 		  
 		  
-		function loadDocument(viewer, auth, documentId) {
+		  function loadDocument(viewer, documentId) {
+        // Find the first 3d geometry and load that.
+        Autodesk.Viewing.Document.load(documentId, function (doc) {// onLoadCallback
+            var geometryItems = [];
+            geometryItems = Autodesk.Viewing.Document.getSubItemsWithProperties(doc.getRootItem(), {
+                'type': 'geometry',
+                'role': '3d'
+            }, true);
 
-			//var path = VIEWING_URL + '/bubbles/' + documentId.substr(4);
-			var path = VIEWING_URL + '/' + documentId.substr(4);
-			//var path = documentId;
-
-			// Find the first 3d geometry and load that.
-			Autodesk.Viewing.Document.load(path, auth,
-				function (doc) {// onLoadCallback
-
-					var geometryItems = [];
-					geometryItems = Autodesk.Viewing.Document.getSubItemsWithProperties(doc.getRootItem(), {
-						'type': 'geometry',
-						'role': '3d'
-					}, true);
-
-				if (geometryItems.length > 0) {
-					viewer.load(doc.getViewablePath(geometryItems[0]),
-						null,           //sharedPropertyDbPath
-						function () {   //onSuccessCallback
-							//alert('viewable are loaded successfully');
-						},
-						function () {   //onErrorCallback
-							//alert('viewable loading failded');
-						}
-					);
-				}
-			}, function (errorMsg) {// onErrorCallback
-				alert("Load Error: " + errorMsg);
-			});
-		}
+            if (geometryItems.length > 0) {
+                viewer.load(doc.getViewablePath(geometryItems[0]));
+            }
+        }, function (errorMsg) {// onErrorCallback
+            alert("Load Error: " + errorMsg);
+        });
+      }
 
           
       </script>

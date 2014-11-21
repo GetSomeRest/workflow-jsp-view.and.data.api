@@ -231,9 +231,9 @@
             invocation.withCredentials = true;
             invocation.send("access-token=" + token);   // expected to set the cookie upon server response			
 		
-			 //random bucket to avoid confliction
+			 //random bucket to avoid confliction, 
 			 // NOTE: do not need to create a bucket every time, it's recommended to use one bucket 
-			var uploadBucket = "translation_daniel" + Math.ceil(Math.random() * 99);
+			var uploadBucket = "translation_daniel_" + Math.ceil(Math.random() * 999);
 			
 			//if it does not exist, you need to create one,
 			//please refer to http://developer.api.autodesk.com/documentation/v1/oss.html#oss-bucket-and-object-api-v1-0
