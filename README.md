@@ -10,6 +10,8 @@ This is a sample in JSP demoing the complete workflow of using Autodesk View and
 
 ##Dependencies
 
+This sample use the library ["library-javascript-view.and.data.api"](https://github.com/Developer-Autodesk/library-javascript-view.and.data.api)
+
 To run this sample, you need a web server(tomcat for instance) and have Java environment configured correctly.
 
 
@@ -17,6 +19,7 @@ To run this sample, you need a web server(tomcat for instance) and have Java env
 
 * Setup tomcat web server, I use XAMPP https://www.apachefriends.org/index.html
 * Copy \tke3 to C:\xampp\Tomcat\webapps\tek3
+* Get Autodesk.ADN.Toolkit.ViewData.js and Autodesk.ADN.Toolkit.Viewer.js from [here](https://github.com/Developer-Autodesk/library-javascript-view.and.data.api) and put them into \tek3\web\js
 * Start tomcat server in XAMPP control panel
 * Browse to http://localhost:8080/tek3/
 
@@ -32,7 +35,7 @@ This sample is licensed under the terms of the [MIT License](http://opensource.o
 
 ##Written by 
 
-Gilbert Bouzeid
+Gilbert Bouzeid & Daniel Du
 
 
 
