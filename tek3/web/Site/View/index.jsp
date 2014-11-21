@@ -11,7 +11,8 @@
 
 <%
     String token = (String) session.getAttribute("token");
-    String urn = request.getParameter("urn");%>
+    String urn = request.getParameter("urn");
+ %>
     <script>
     var invocation = new XMLHttpRequest();
     function handler() {
@@ -20,67 +21,49 @@
       }
     }
     var token = '<%=token%>'; // set from the server side on first time invocation.
-  	invocation.open('POST', 'https://developer.api.autodesk.com/utility/v1/settoken', false); // do a sync call
-  	invocation.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-  	invocation.onreadystatechange = handler;  // see above
-  	invocation.withCredentials = true;
+    invocation.open('POST', 'https://developer.api.autodesk.com/utility/v1/settoken', false); // do a sync call
+    invocation.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    invocation.onreadystatechange = handler;  // see above
+    invocation.withCredentials = true;
     invocation.send("access-token=" + token);   // expected to set the cookie upon server response
     </script>
-    <%
+<%
     if (urn==null || urn.trim().isEmpty()) {
-        urn=""; } else {%>
+        urn=""; } 
+    else {
+%>
 
-
-
-	<link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.css?v=0.1.88" type="text/css">
-    <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=0.1.88"></script>
+	<link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.css" type="text/css">
+    <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js"></script>
+    <script type='text/javascript' src='http://code.jquery.com/jquery-2.1.1.js'></script> 
+    <!-- 
+    Get Javascript library from https://github.com/Developer-Autodesk/library-javascript-view.and.data.api -->
+    <script type="text/javascript" src=../../../web/js/Autodesk.ADN.Toolkit.Viewer.js></script>
 
 
       <script>
 
-      var viewers = [];
-      function initialize() {
+   
+          function initialize() {
 
+            // var token = '<%=token%>'; // set from the server side on first time invocation.
+            // var urn = '<%=urn%>';
 
-        var options = {};
+            var token = Autodesk.Viewing.Private.getParameterByName("accessToken");
+            var urn = Autodesk.Viewing.Private.getParameterByName("urn");
 
-  			options.accessToken = Autodesk.Viewing.Private.getParameterByName("accessToken") ? Autodesk.Viewing.Private.getParameterByName("accessToken") : token;
-  			options.document = 'urn:<%=urn%>';
+            adnViewerMng = new Autodesk.ADN.Toolkit.Viewer.AdnViewerManager(
+                                        token,
+                                        document.getElementById('viewer1'));
+                                    adnViewerMng.loadDocument(urn);
+          }
 
-  			var viewerContainer = document.getElementById('viewer1');
-  			var viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerContainer, {});
-  			
-  			Autodesk.Viewing.Initializer(options, function () {
-              viewer.start();
-              loadDocument(viewer, options.document);
-        });
-
-
-           
-      }
-		  
-		  
-		  function loadDocument(viewer, documentId) {
-        // Find the first 3d geometry and load that.
-        Autodesk.Viewing.Document.load(documentId, function (doc) {// onLoadCallback
-            var geometryItems = [];
-            geometryItems = Autodesk.Viewing.Document.getSubItemsWithProperties(doc.getRootItem(), {
-                'type': 'geometry',
-                'role': '3d'
-            }, true);
-
-            if (geometryItems.length > 0) {
-                viewer.load(doc.getViewablePath(geometryItems[0]));
-            }
-        }, function (errorMsg) {// onErrorCallback
-            alert("Load Error: " + errorMsg);
-        });
-      }
 
           
       </script>
-    <%}
-%>
+    <%
+      } //jsp else
+    %>
 
 <html>
   <head>

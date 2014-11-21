@@ -7,43 +7,21 @@
 <head>
     <title>Upload</title>
     <link rel="stylesheet" type="text/css" href="/tek3/web/Common/style/generic.css">
+   
+    <!-- 
+    Get Javascript library from https://github.com/Developer-Autodesk/library-javascript-view.and.data.api -->
+    <script type="text/javascript" src=../../../web/js/Autodesk.ADN.Toolkit.ViewData.js></script>
     <script language="javascript">
+        
+        var files = [];
+        var viewDataClient;
+        var adnViewerMng;
+
         function info(txt) { document.getElementById('info').innerHTML = txt; }
-        function code(txt) {
-            var passedTXT = txt;
-			
-			var index = passedTXT.indexOf("\"key\" : \"")+"\"key\" : \"".length;
-            var key = passedTXT.substring(index, passedTXT.indexOf("\"", index+1));
-			
-            var index = passedTXT.indexOf("\"id\" : \"")+"\"id\" : \"".length;
-            var urn = passedTXT.substring(index, passedTXT.indexOf("\"", index+1));
-	
-			var base64URN = window.btoa(urn);
 
-            // trigger bubble POST
-            var invocation = new XMLHttpRequest();
-            function handler() {
-              // noop
-            }
-            invocation.open('POST', 'https://developer.api.autodesk.com/viewingservice/v1/register', false); // do a sync call
-            invocation.setRequestHeader('Content-Type', 'application/json');
-            invocation.onreadystatechange = handler;  // see above
-            invocation.withCredentials = true;
-            var tosend = "{ \"urn\": \"" +  base64URN + "\"}";
-            invocation.send(tosend);
-            document.getElementById('byte_content').innerHTML = "<pre><code>" + "uploaded filename is: '" + key + "'.<BR>" +
-                    "urn is: " + base64URN + "</code></pre>";
+        function init(){
 
-            invocation = new XMLHttpRequest();
-            invocation.open('POST', '/tek3/web/Site/form/view/list.jsp?name=' + key + '&base64=' + base64URN, false); // do a sync call
-            invocation.onreadystatechange = handler;  // see above
-            invocation.withCredentials = true;
-            invocation.send();
-
-        }
-
-        function init() {
-            // Check for the various File API support.
+               // Check for the various File API support.
             if (window.File && window.FileReader && window.FileList && window.Blob) {
               //info("Ready! All required File APIs are supported.");
             } else {
@@ -64,8 +42,200 @@
 
             //document.querySelector('.readBytesButtons').addEventListener('click', readBlob, false);
 
-            document.querySelector('.sendBytesButtons').addEventListener('click', uploadFile, false);
+            document.querySelector('.sendBytesButtons').addEventListener('click', doUploadFile, false);
+
+
         }
+
+        function doUploadFile(evt) {
+
+            //sanity checks ...
+            var token = '<%=(String) session.getAttribute("token")%>'; // set from the server side on first time invocation.
+
+            if (token === '') {
+                console.log('Access Token cannot be empty');
+                console.log('Exiting ...');
+                return;
+            }
+
+             var bucket = 'temp_bucket_for_testing';
+
+             if (bucket === '') {
+                info('Bucket name cannot be empty');
+                console.log('Bucket name cannot be empty');
+                console.log('Exiting ...');
+                return;
+            }
+
+            
+            files = document.getElementById('files').files;
+
+             if (files.length === 0) {
+                info("Please select a file!");
+                console.log('No file to upload');
+                console.log('Exiting ...');
+                return;
+            }
+            //get into business
+            viewDataClient = new Autodesk.ADN.Toolkit.ViewData.AdnViewDataClient(
+              'https://developer.api.autodesk.com',
+              token);
+            viewDataClient.getBucketDetailsAsync(
+                bucket,
+                //onSuccess
+                function (bucketResponse) {
+                    console.log('Bucket details successful:');
+                    console.log(bucketResponse);
+                    uploadFiles(bucket, files);
+                },
+                //onError
+                function (error) {
+                  info("Bucket doesn't exist.Attempting to create...");
+                  
+                    console.log("Bucket doesn't exist");
+                    console.log("Attempting to create...");
+                    createBucket(bucket);
+                });
+
+
+
+
+        }
+
+         ///////////////////////////////////////////////////////////////////////////
+        // 
+        //
+        ///////////////////////////////////////////////////////////////////////////
+        function createBucket(bucket) {
+            var bucketCreationData = {
+                bucketKey: bucket,
+                servicesAllowed: {},
+                policy: 'transient'
+            }
+            viewDataClient.createBucketAsync(
+                bucketCreationData,
+                //onSuccess
+                function (response) {
+                    info('Bucket creation successful');
+                    console.log('Bucket creation successful:');
+                    console.log(response);
+                    uploadFiles(response.key, files);
+                },
+                //onError
+                function (error) {
+                    info('Bucket creation failed.');
+                    console.log('Bucket creation failed:');
+                    console.log(error);
+                    console.log('Exiting ...');
+                    return;
+                });
+        }
+
+
+        ///////////////////////////////////////////////////////////////////////////
+        // 
+        //
+        ///////////////////////////////////////////////////////////////////////////
+        function uploadFiles(bucket, files) {
+            for (var i = 0; i < files.length; ++i) {
+                var file = files[i];
+                console.log('Uploading file: ' + file.name + ' ...');
+                viewDataClient.uploadFileAsync(
+                    file,
+                    bucket,
+                    file.name,
+                    //onSuccess
+                    function (response) {
+                        info('File upload successful');
+                        console.log('File upload successful:');
+                        console.log(response);
+                        var fileId = response.objects[0].id;
+                        var fileName = response.file.name;
+                        var registerResponse =
+                            viewDataClient.register(fileId);
+                        if (registerResponse.Result === "Success" ||
+                            registerResponse.Result === "Created") {
+                            console.log("Registration result: " +
+                                registerResponse.Result);
+                          var msg = 'Starting translation: ' +
+                                fileId;
+                            info(msg);
+                            console.log(msg);
+                            checkTranslationStatus(
+                                fileId,
+                                1000 * 60 * 5, //5 mins timeout
+                                //onSuccess
+                                function (fileId, viewable) {
+                                    var msg = "Translation successful: " +
+                                        response.file.name;
+                                    info(msg);
+                                    console.log(msg);
+                                    console.log("Viewable: ");
+                                    console.log(viewable);
+
+                                   onRegisterSuccess(fileName,viewable);
+
+
+                                });
+                        }
+                    },
+                    //onError
+                    function (error) {
+                        info('File upload failed');
+                        console.log('File upload failed:');
+                        console.log(error);
+                    });
+            }
+        }
+
+
+        function onRegisterSuccess (fileName,viewable) {
+          var  key = fileName;
+          var base64URN = viewable.urn;
+
+          document.getElementById('byte_content').innerHTML = "<pre><code>" + "uploaded filename is: '" + key + "'.<BR>" +
+                    "urn is: " + base64URN + "</code></pre>";
+
+          var invocation = new XMLHttpRequest();
+          invocation.open('POST', '/tek3/web/Site/form/view/list.jsp?name=' + key + '&base64=' + base64URN, false); // do a sync call
+          invocation.onreadystatechange = (function(){
+            
+          })();;  // 
+          invocation.send();
+
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
+        // 
+        //
+        ///////////////////////////////////////////////////////////////////////////
+        function checkTranslationStatus(fileId, timeout, onSuccess) {
+            var startTime = new Date().getTime();
+            var timer = setInterval(function () {
+                var dt = (new Date().getTime() - startTime) / timeout;
+                if (dt >= 1.0) {
+                    clearInterval(timer);
+                }
+                else {
+                    viewDataClient.getViewableAsync(
+                        fileId,
+                        function (response) {
+                            console.log(
+                                'Translation Progess ' +
+                                fileId + ': '
+                                + response.progress);
+                            if (response.progress === 'complete') {
+                                clearInterval(timer);
+                                onSuccess(fileId,response);
+                            }
+                        },
+                        function (error) {
+                        });
+                }
+            }, 2000);
+        };
+
+
 
         function handleFileSelect(evt) {
             var files = evt.target.files;
@@ -103,184 +273,7 @@
             document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
         }
 
-        function readBlob(evt) {
-            var files = document.getElementById('files').files;
-            if (!files.length) {
-              info("Please select a file!");
-              return;
-            }
 
-            var file = files[0];
-
-            var reader = new FileReader();
-            reader.onerror = errorHandler;
-            reader.onprogress = updateProgress;
-            reader.onabort = function(e) { info('File read cancelled'); };
-            reader.onloadstart = function(e) { document.getElementById('progress_bar').className = 'loading'; };
-            reader.onload = function(e) {
-              // Ensure that the progress bar displays 100% at the end.
-              var progress = document.querySelector('.percent');
-              progress.style.width = '100%';
-              progress.textContent = '100%';
-              setTimeout("document.getElementById('progress_bar').className='';", 2000);
-            }
-
-            // If we use onloadend, we need to check the readyState.
-            reader.onloadend = function(evt) {
-              if (evt.target.readyState == FileReader.DONE) { // DONE == 2
-                document.getElementById('byte_content').textContent = evt.target.result;
-              }
-            };
-
-            var blob = file.slice(0, file.size);
-            reader.readAsBinaryString(blob);
-          }
-
-        function errorHandler(evt) {
-            var title = document.getElementById('title');
-            switch(evt.target.error.code) {
-              case evt.target.error.NOT_FOUND_ERR:
-                info("File Not Found!");
-                break;
-              case evt.target.error.NOT_READABLE_ERR:
-                info("File is not readable");
-                break;
-              case evt.target.error.ABORT_ERR:
-                break; // noop
-              default:
-                info("An error occurred reading this file.");
-            };
-        }
-
-        function updateProgress(evt) {
-            var progress = document.querySelector('.percent');
-            // evt is an ProgressEvent.
-            if (evt.lengthComputable) {
-              var percentLoaded = Math.round((evt.loaded / evt.total) * 100);
-              // Increase the progress bar length.
-              if (percentLoaded < 100) {
-                progress.style.width = percentLoaded + '%';
-                progress.textContent = percentLoaded + '%';
-              }
-            }
-        }
-
-        // CORS
-        // --------------------------------------
-        // Create the XHR object.
-        function createCORSRequest(method, url, headers) {
-          var xhr = new XMLHttpRequest();
-          if ("withCredentials" in xhr) {
-            // XHR for Chrome/Firefox/Opera/Safari.
-            xhr.open(method, url, true);
-            xhr.withCredentials = true;
-            for (var h in headers) { xhr.setRequestHeader(h, headers[h]); }
-          } else {
-            // CORS not supported.
-            xhr = null;
-          }
-          return xhr;
-        }
-
-		function CreateBucket(bucketKey,invocation){
-		
-		
-				function handler() {
-				  if (invocation.readyState == 4) { //4 = 'loaded'
-					var payload = invocation.responseText; // TODO no-op
-					if (invocation.status==200){
-						//created successfully
-					}else if(invocation.status==409) {  
-						//alert('conflict')
-						//conflict, existed
-					}
-					else {
-						alert('error when creating bucket');
-					}
-					 
-				  }
-				}
-			invocation.open('POST', 'https://developer.api.autodesk.com/oss/v1/buckets', false); // do a sync call
-			invocation.setRequestHeader('Content-Type', 'application/json');
-			invocation.onreadystatechange = handler;  // see above
-			invocation.withCredentials = true;
-			var toSend =  "{\"bucketKey\":\"" + bucketKey + "\",\"servicesAllowed\":{},\"policy\":\"transient\"}";
-			invocation.send(toSend);
-			
-		}
-		
-        // Make the actual CORS request.
-        function uploadFile(evt) {
-            var files = document.getElementById('files').files;
-            if (!files.length) {
-              info("Please select a file!");
-              return;
-            }
-            var f = files[0];
-
-            var invocation = new XMLHttpRequest();
-            function handler() {
-              if (invocation.readyState == 4) { //4 = 'loaded'
-                 var payload = invocation.responseText; // TODO no-op
-              }
-            }
-            var token = '<%=(String) session.getAttribute("token")%>'; // set from the server side on first time invocation.
-            invocation.open('POST', 'https://developer.api.autodesk.com/utility/v1/settoken', false); // do a sync call
-            invocation.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            invocation.onreadystatechange = handler;  // see above
-            invocation.withCredentials = true;
-            invocation.send("access-token=" + token);   // expected to set the cookie upon server response			
-		
-			 //random bucket to avoid confliction, 
-			 // NOTE: do not need to create a bucket every time, it's recommended to use one bucket 
-			var uploadBucket = "translation_daniel_" + Math.ceil(Math.random() * 999);
-			
-			//if it does not exist, you need to create one,
-			//please refer to http://developer.api.autodesk.com/documentation/v1/oss.html#oss-bucket-and-object-api-v1-0
-			CreateBucket(uploadBucket,invocation);
-			
-			
-			
-            // create CORS request
-            var method = 'PUT';
-            
-            var uploadServerUrl = "https://developer.api.autodesk.com";
-            var url = uploadServerUrl + '/oss/v1/buckets/' + uploadBucket + '/objects/' + escape(f.name);
-            var headers = {
-                'Content-Type'  : f.type || 'application/stream',
-            };
-
-            var xhr = createCORSRequest(method, url, headers);
-            if (!xhr) {
-                info('CORS not supported');
-                return;
-            }
-
-            // Handlers.
-            xhr.onload = function() { code(xhr.responseText); };
-            xhr.onerror = function() { info('Woops, there was an error making the request.'); };
-            xhr.onprogress = updateProgress;
-
-            var reader = new FileReader();
-            reader.onerror = errorHandler;
-            //reader.onprogress = updateProgress;
-            reader.onabort = function(e) { info('File read cancelled'); };
-            reader.onloadstart = function(e) { document.getElementById('progress_bar').className = 'loading'; };
-            reader.onload = function(e) {
-              // Ensure that the progress bar displays 100% at the end.
-              var progress = document.querySelector('.percent');
-              progress.style.width = '100%';
-              progress.textContent = '100%';
-              setTimeout("document.getElementById('progress_bar').className='';", 2000);
-            }
-            reader.onloadend = function(evt) {
-              if (evt.target.readyState == FileReader.DONE) {
-                xhr.send(evt.target.result);
-              }
-            };
-            var blob = f.slice(0, f.size);
-            reader.readAsArrayBuffer(blob);
-        }
     </script>
 </head>
 
