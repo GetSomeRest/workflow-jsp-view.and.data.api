@@ -1,9 +1,10 @@
 #workflow-jsp
 
+##Update
+
+This sample is retired and will not be maintained any more, please refer to http://developer-autodesk.github.io/ for new samples.
 
 ##Description
-
-*This sample is part of the [Developer-Autodesk/Autodesk-View-and-Data-API-Samples](https://github.com/Developer-Autodesk/autodesk-view-and-data-api-samples) repository.*
 
 This is a sample in JSP demoing the complete workflow of using Autodesk View and Data API
 
